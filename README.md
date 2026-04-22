@@ -135,6 +135,13 @@ The choice to implement this as a GitHub Actions composite action means it integ
 
 ---
 
+## Related projects
+
+- **[multicloud-sa-toolkit](https://github.com/JamesIOmete/multicloud-sa-toolkit)** — the multi-cloud Terraform toolkit this reviewer was designed to complement. Fixture data is drawn from that toolkit's UC06 plan output.
+- **[multicloud-estate-briefing](https://github.com/JamesIOmete/multicloud-estate-briefing)** — AI-powered estate briefing tool that ingests UC02 `inventory.json` artifacts and produces a natural-language summary of what's running, anomaly callouts, and recommended next actions.
+
+---
+
 ## License
 
 MIT
