@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+.env
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Terraform plan outputs (local testing only — never commit)
+plan.json
+plan.tfplan
+*.tfplan
+out/
+
+# Editor
+.vscode/
+.idea/
+*.swp

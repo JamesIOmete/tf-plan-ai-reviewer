@@ -1,0 +1,67 @@
+name: 'Terraform Plan AI Reviewer'
+description: 'AI-powered Terraform plan review — posts a PASS/WARN/BLOCK verdict as a PR comment'
+author: 'JamesIOmete'
+
+branding:
+  icon: 'eye'
+  color: 'blue'
+
+inputs:
+  plan-json-path:
+    description: 'Workspace-relative path to terraform plan -json output file'
+    required: true
+  openai-api-key:
+    description: 'OpenAI API key (mutually exclusive with azure-openai-* inputs)'
+    required: false
+    default: ''
+  azure-openai-endpoint:
+    description: 'Azure OpenAI endpoint URL'
+    required: false
+    default: ''
+  azure-openai-key:
+    description: 'Azure OpenAI API key'
+    required: false
+    default: ''
+  azure-openai-deployment:
+    description: 'Azure OpenAI deployment name'
+    required: false
+    default: 'gpt-4o'
+  model:
+    description: 'OpenAI model name'
+    required: false
+    default: 'gpt-4o'
+  github-token:
+    description: 'GitHub token for posting PR comment'
+    required: true
+    default: '${{ github.token }}'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r "${{ github.action_path }}/requirements.txt"
+
+    - name: Run AI plan review
+      shell: bash
+      # plan-json-path is workspace-relative; prepend GITHUB_WORKSPACE so the
+      # reviewer can find the file regardless of working-directory.
+      run: >
+        python -m reviewer.review
+        --plan "$GITHUB_WORKSPACE/${{ inputs.plan-json-path }}"
+        --post-comment
+      working-directory: ${{ github.action_path }}
+      env:
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        AZURE_OPENAI_ENDPOINT: ${{ inputs.azure-openai-endpoint }}
+        AZURE_OPENAI_KEY: ${{ inputs.azure-openai-key }}
+        AZURE_OPENAI_DEPLOYMENT: ${{ inputs.azure-openai-deployment }}
+        MODEL: ${{ inputs.model }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
