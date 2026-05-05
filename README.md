@@ -1,145 +1,163 @@
 # tf-plan-ai-reviewer
 
-A GitHub Actions composite action that runs an AI review of a `terraform plan -json` output and posts a structured **PASS / WARN / BLOCK** verdict as a pull request comment.
+A GitHub Actions composite action that reviews Terraform plan output using AI and posts a structured **PASS / WARN / BLOCK** verdict as a pull request comment.
 
-Built to demonstrate AI-augmented IaC workflows. See also: [multicloud-sa-toolkit](https://github.com/JamesIOmete/multicloud-sa-toolkit) — the multi-cloud Terraform toolkit this reviewer was designed to complement. The fixture data in `tests/fixtures/` is drawn from that toolkit's UC06 plan output.
+Supports **Anthropic Claude** (default), **OpenAI**, and **Azure OpenAI** — configure by passing the appropriate API key.
 
----
-
-## How it works
-
-```
-terraform plan -json > plan.json
-        │
-        ▼
-reviewer/parser.py     ← extracts resource changes, risk signals (IAM, open CIDRs, destroys)
-        │
-        ▼
-reviewer/prompt.py     ← builds a structured LLM prompt from the parsed summary
-        │
-        ▼
-reviewer/llm.py        ← calls OpenAI or Azure OpenAI
-        │
-        ▼
-reviewer/formatter.py  ← renders a markdown PR comment with verdict + change table
-        │
-        ▼
-GitHub PR comment
-```
-
-The reviewer is intentionally narrow: it takes plan JSON, produces a comment, and gets out of the way. It augments human review — it does not replace it.
+![Example review comment](docs/example-review.png)
 
 ---
 
-## Quick start
+## What it does
 
-Add this step to your repository's workflow **after** `terraform plan`:
+On every pull request that modifies Terraform configuration:
+
+1. Parses `terraform plan -json` output into a structured summary
+2. Identifies IAM/policy changes, open network ingress/egress, destructive operations, and sensitive outputs
+3. Sends the summary to the configured LLM for review
+4. Posts a PR comment with a verdict, summary, risk findings, and recommendations
+
+**Verdicts:**
+- `PASS` — no notable risks, safe to merge
+- `WARN` — risks present but not critical; reviewer attention recommended
+- `BLOCK` — destructive or high-privilege changes that must be confirmed by a human before merge
+
+---
+
+## Usage
+
+Add to your Terraform workflow:
 
 ```yaml
-jobs:
-  tf-plan-review:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
+- name: Terraform plan (JSON output)
+  run: |
+    terraform plan -input=false -json -var="alert_email=" \
+      2>/dev/null > plan.json
 
-      - name: Terraform Init and Plan
-        run: |
-          terraform init
-          terraform plan -json > plan.json
-        working-directory: ./terraform
-
-      - name: AI Plan Review
-        uses: JamesIOmete/tf-plan-ai-reviewer@v1
-        with:
-          plan-json-path: terraform/plan.json   # workspace-relative
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+- name: AI plan review
+  uses: JamesIOmete/tf-plan-ai-reviewer@v1.0.0
+  with:
+    plan-json-path: plan.json
+    anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
----
-
-## Example PR comment
-
-> ## 🤖 Terraform Plan AI Review
->
-> **Verdict: ⚠️ WARN**
->
-> | Action | Count |
-> |--------|-------|
-> | ➕ Create  | 3 |
-> | 🔄 Update  | 0 |
-> | 💥 Destroy | 0 |
-> | ♻️ Replace  | 0 |
->
-> ---
->
-> **Summary:** This plan creates 3 new AWS resources — a VPC, a subnet, and a security group. No destructive changes are present.
->
-> **Risk Findings:**
-> - `WARN` — `aws_security_group.uc06`: egress permits all traffic to `0.0.0.0/0` on all protocols. This is a common default but confirm it is intentional.
->
-> **Recommendations:**
-> - Consider restricting egress to known destinations if this workload has a fixed outbound target.
+See [`aws-iot-edge-reference`](https://github.com/JamesIOmete/aws-iot-edge-reference) for a complete working example including the full Terraform workflow.
 
 ---
 
 ## Inputs
 
+### Anthropic Claude (default, recommended)
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `anthropic-api-key` | Yes* | — | Anthropic API key |
+| `anthropic-model` | No | `claude-sonnet-4-5` | Claude model name |
+
+### OpenAI
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `openai-api-key` | Yes* | — | OpenAI API key |
+| `model` | No | `gpt-4o` | OpenAI model name |
+
+### Azure OpenAI
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `azure-openai-endpoint` | Yes* | — | Azure OpenAI endpoint URL |
+| `azure-openai-key` | Yes* | — | Azure OpenAI API key |
+| `azure-openai-deployment` | No | `gpt-4o` | Deployment name |
+
+### Common
+
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `plan-json-path` | Yes | — | Workspace-relative path to `terraform plan -json` output |
-| `openai-api-key` | No* | — | OpenAI API key |
-| `azure-openai-endpoint` | No* | — | Azure OpenAI endpoint URL |
-| `azure-openai-key` | No* | — | Azure OpenAI API key |
-| `azure-openai-deployment` | No | `gpt-4o` | Azure OpenAI deployment name |
-| `model` | No | `gpt-4o` | Model name (OpenAI) |
-| `github-token` | Yes | `${{ github.token }}` | Token for posting PR comment |
+| `github-token` | Yes | `${{ github.token }}` | GitHub token for posting PR comment |
 
-\* One of `openai-api-key` or the `azure-openai-*` pair must be provided.
+**Provider selection:** Anthropic is used if `anthropic-api-key` is set. Azure OpenAI is used if `azure-openai-endpoint` is set. Otherwise OpenAI is used. Only one provider key is required.
 
 ---
 
-## Running locally
+## Provider examples
 
-```bash
-pip install -r requirements.txt
-terraform plan -json > plan.json
-python -m reviewer.review --plan plan.json
+### Anthropic Claude
+
+```yaml
+- uses: JamesIOmete/tf-plan-ai-reviewer@v1.0.0
+  with:
+    plan-json-path: plan.json
+    anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+    anthropic-model: claude-sonnet-4-5
+    github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-To write the review to a file instead:
+### OpenAI
 
-```bash
-python -m reviewer.review --plan plan.json --output review.md
+```yaml
+- uses: JamesIOmete/tf-plan-ai-reviewer@v1.0.0
+  with:
+    plan-json-path: plan.json
+    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+    model: gpt-4o
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Azure OpenAI
+
+```yaml
+- uses: JamesIOmete/tf-plan-ai-reviewer@v1.0.0
+  with:
+    plan-json-path: plan.json
+    azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    azure-openai-key: ${{ secrets.AZURE_OPENAI_KEY }}
+    azure-openai-deployment: gpt-4o
+    github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
 
-## Tests
+## Generating plan JSON
+
+`terraform plan -json` emits NDJSON — one object per line. The reviewer handles this format automatically:
 
 ```bash
-pip install -r requirements.txt
-pytest tests/ -v
+terraform plan \
+  -input=false \
+  -json \
+  2>/dev/null > plan.json
+```
+
+Do not use `terraform show -json tfplan` — use `terraform plan -json` directly.
+
+---
+
+## Repository structure
+
+```
+tf-plan-ai-reviewer/
+├── action.yml              # Composite action definition
+├── reviewer/
+│   ├── review.py           # CLI entrypoint, NDJSON parsing, GitHub comment posting
+│   ├── parser.py           # Terraform plan JSON → PlanSummary
+│   ├── prompt.py           # LLM message construction
+│   ├── llm.py              # Provider backends: Anthropic, OpenAI, Azure OpenAI
+│   └── formatter.py        # PR comment markdown formatting
+├── tests/
+│   └── ...                 # Parser and integration tests
+├── docs/
+│   └── example-review.png  # Example PR comment output
+└── requirements.txt
 ```
 
 ---
 
-## Design rationale
+## Related
 
-Terraform plan review is a step that engineers routinely skip or skim under time pressure. An AI reviewer catches patterns humans miss at speed: unexpected destroys, IAM privilege escalations, broadly-open security groups, and sensitive value exposure. It surfaces risk signals with enough context to make a human decision easy — not to automate that decision away.
-
-The choice to implement this as a GitHub Actions composite action means it integrates into any Terraform repository with a single `uses:` line and no infrastructure to maintain.
-
----
-
-## Related projects
-
-- **[multicloud-sa-toolkit](https://github.com/JamesIOmete/multicloud-sa-toolkit)** — the multi-cloud Terraform toolkit this reviewer was designed to complement. Fixture data is drawn from that toolkit's UC06 plan output.
-- **[multicloud-estate-briefing](https://github.com/JamesIOmete/multicloud-estate-briefing)** — AI-powered estate briefing tool that ingests UC02 `inventory.json` artifacts and produces a natural-language summary of what's running, anomaly callouts, and recommended next actions.
-- **[tf-scaffold-ai](https://github.com/JamesIOmete/tf-scaffold-ai)** — generates a working Terraform scaffold from a plain-language architecture description; the upstream counterpart to this reviewer.
+- [`aws-iot-edge-reference`](https://github.com/JamesIOmete/aws-iot-edge-reference) — IoT reference implementation that uses this action in its CI workflow
+- [`multicloud-sa-toolkit`](https://github.com/JamesIOmete/multicloud-sa-toolkit) — Multi-cloud IaC reference; compatible with this reviewer
 
 ---
 
