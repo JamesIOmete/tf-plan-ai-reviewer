@@ -10,10 +10,34 @@ inputs:
   plan-json-path:
     description: 'Workspace-relative path to terraform plan -json output file'
     required: true
-  openai-api-key:
-    description: 'OpenAI API key (mutually exclusive with azure-openai-* inputs)'
+
+  # ---------------------------------------------------------------------------
+  # Anthropic (Claude) — takes priority if anthropic-api-key is set
+  # ---------------------------------------------------------------------------
+  anthropic-api-key:
+    description: 'Anthropic API key. Takes priority over OpenAI and Azure if set.'
     required: false
     default: ''
+  anthropic-model:
+    description: 'Anthropic model name'
+    required: false
+    default: 'claude-sonnet-4-20250514'
+
+  # ---------------------------------------------------------------------------
+  # OpenAI
+  # ---------------------------------------------------------------------------
+  openai-api-key:
+    description: 'OpenAI API key (mutually exclusive with anthropic-* and azure-openai-* inputs)'
+    required: false
+    default: ''
+  model:
+    description: 'OpenAI model name'
+    required: false
+    default: 'gpt-4o'
+
+  # ---------------------------------------------------------------------------
+  # Azure OpenAI
+  # ---------------------------------------------------------------------------
   azure-openai-endpoint:
     description: 'Azure OpenAI endpoint URL'
     required: false
@@ -26,10 +50,10 @@ inputs:
     description: 'Azure OpenAI deployment name'
     required: false
     default: 'gpt-4o'
-  model:
-    description: 'OpenAI model name'
-    required: false
-    default: 'gpt-4o'
+
+  # ---------------------------------------------------------------------------
+  # GitHub
+  # ---------------------------------------------------------------------------
   github-token:
     description: 'GitHub token for posting PR comment'
     required: true
@@ -57,11 +81,13 @@ runs:
         --post-comment
       working-directory: ${{ github.action_path }}
       env:
-        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
-        AZURE_OPENAI_ENDPOINT: ${{ inputs.azure-openai-endpoint }}
-        AZURE_OPENAI_KEY: ${{ inputs.azure-openai-key }}
-        AZURE_OPENAI_DEPLOYMENT: ${{ inputs.azure-openai-deployment }}
-        MODEL: ${{ inputs.model }}
-        GITHUB_TOKEN: ${{ inputs.github-token }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        ANTHROPIC_API_KEY:        ${{ inputs.anthropic-api-key }}
+        ANTHROPIC_MODEL:          ${{ inputs.anthropic-model }}
+        OPENAI_API_KEY:           ${{ inputs.openai-api-key }}
+        AZURE_OPENAI_ENDPOINT:    ${{ inputs.azure-openai-endpoint }}
+        AZURE_OPENAI_KEY:         ${{ inputs.azure-openai-key }}
+        AZURE_OPENAI_DEPLOYMENT:  ${{ inputs.azure-openai-deployment }}
+        MODEL:                    ${{ inputs.model }}
+        GITHUB_TOKEN:             ${{ inputs.github-token }}
+        GITHUB_REPOSITORY:        ${{ github.repository }}
+        PR_NUMBER:                ${{ github.event.pull_request.number }}
