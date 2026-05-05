@@ -34,6 +34,49 @@ def post_github_comment(body: str) -> None:
     resp.raise_for_status()
 
 
+def load_plan(path: str) -> dict:
+    """
+    Load a Terraform plan JSON file.
+
+    terraform plan -json emits NDJSON — one JSON object per line, each with
+    a "type" field. We extract the line where type == "plan" which contains
+    the full plan data (resource_changes, output_changes, terraform_version)
+    that the parser expects.
+
+    Falls back to standard json.load() for single-object JSON files (e.g.
+    terraform show -json output), so the tool works with both formats.
+    """
+    with open(path) as f:
+        raw = f.read().strip()
+
+    # Detect NDJSON: multiple lines each starting with '{'
+    lines = [l.strip() for l in raw.splitlines() if l.strip()]
+
+    if len(lines) > 1:
+        # NDJSON format — find the "plan" type object
+        for line in lines:
+            try:
+                obj = json.loads(line)
+                if obj.get("type") == "plan":
+                    return obj
+            except json.JSONDecodeError:
+                continue
+
+        # Fallback: try the last non-empty line
+        try:
+            return json.loads(lines[-1])
+        except json.JSONDecodeError:
+            pass
+
+        raise ValueError(
+            "Could not find a 'type': 'plan' object in the NDJSON stream. "
+            "Ensure the plan file was produced by: terraform plan -json"
+        )
+
+    # Single JSON object
+    return json.loads(raw)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="AI review of a Terraform plan")
     parser.add_argument("--plan", required=True, help="Path to terraform plan -json output")
@@ -45,8 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", help="Write review markdown to this file instead of stdout")
     args = parser.parse_args(argv)
 
-    with open(args.plan) as f:
-        plan_data = json.load(f)
+    plan_data = load_plan(args.plan)
 
     summary = parse_plan(plan_data)
     messages = build_messages(summary)
