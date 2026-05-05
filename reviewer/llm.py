@@ -34,7 +34,7 @@ def _call_anthropic(messages: list[dict[str, str]]) -> str:
             user_messages.append(m)
 
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+    model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 
     response = client.messages.create(
         model=model,

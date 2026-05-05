@@ -21,7 +21,7 @@ inputs:
   anthropic-model:
     description: 'Anthropic model name'
     required: false
-    default: 'claude-sonnet-4-20250514'
+    default: 'claude-sonnet-4-5'
 
   # ---------------------------------------------------------------------------
   # OpenAI
