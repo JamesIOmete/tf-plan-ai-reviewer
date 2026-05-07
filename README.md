@@ -154,10 +154,12 @@ tf-plan-ai-reviewer/
 
 ---
 
-## Related
+## Related projects
 
-- [`aws-iot-edge-reference`](https://github.com/JamesIOmete/aws-iot-edge-reference) — IoT reference implementation that uses this action in its CI workflow
-- [`multicloud-sa-toolkit`](https://github.com/JamesIOmete/multicloud-sa-toolkit) — Multi-cloud IaC reference; compatible with this reviewer
+- **[multicloud-sa-toolkit](https://github.com/JamesIOmete/multicloud-sa-toolkit)** — the multi-cloud Terraform toolkit this reviewer was designed to complement. Fixture data is drawn from that toolkit's UC06 plan output.
+- **[multicloud-estate-briefing](https://github.com/JamesIOmete/multicloud-estate-briefing)** — AI-powered estate briefing tool that ingests UC02 `inventory.json` artifacts and produces a natural-language summary of what's running, anomaly callouts, and recommended next actions.
+- **[iot-ops-agent](https://github.com/JamesIOmete/iot-ops-agent)** — sibling AI tooling project. Where tf-plan-ai-reviewer applies LLM reasoning to a single IaC review pass, iot-ops-agent demonstrates a full agentic loop with tool use, runbook execution, and structured reasoning logs.
+- **[aws-iot-edge-reference](https://github.com/JamesIOmete/aws-iot-edge-reference)** — the IoT stack whose Terraform this reviewer is used to validate in CI.
 
 ---
 
