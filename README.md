@@ -160,6 +160,7 @@ tf-plan-ai-reviewer/
 - **[multicloud-estate-briefing](https://github.com/JamesIOmete/multicloud-estate-briefing)** — AI-powered estate briefing tool that ingests UC02 `inventory.json` artifacts and produces a natural-language summary of what's running, anomaly callouts, and recommended next actions.
 - **[iot-ops-agent](https://github.com/JamesIOmete/iot-ops-agent)** — sibling AI tooling project. Where tf-plan-ai-reviewer applies LLM reasoning to a single IaC review pass, iot-ops-agent demonstrates a full agentic loop with tool use, runbook execution, and structured reasoning logs.
 - **[aws-iot-edge-reference](https://github.com/JamesIOmete/aws-iot-edge-reference)** — the IoT stack whose Terraform this reviewer is used to validate in CI.
+- **[tf-scaffold-ai](https://github.com/JamesIOmete/tf-scaffold-ai)** — generates working Terraform scaffolds from plain-language architecture descriptions; the upstream generative counterpart to this reviewer — scaffold there, review here.
 
 ---
 
