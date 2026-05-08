@@ -1,5 +1,7 @@
 # tf-plan-ai-reviewer
 
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Terraform%20Plan%20AI%20Reviewer-blue?logo=github)](https://github.com/marketplace/actions/terraform-plan-ai-reviewer)
+
 A GitHub Actions composite action that reviews Terraform plan output using AI and posts a structured **PASS / WARN / BLOCK** verdict as a pull request comment.
 
 Supports **Anthropic Claude** (default), **OpenAI**, and **Azure OpenAI** — configure by passing the appropriate API key.
